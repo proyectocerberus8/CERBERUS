@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CERBERUS C2 ALPHA</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0f1214;--panel:#171b1e;--panel2:#1f2428;--line:#2c3237;--text:#e7eaec;--muted:#8f999f;--acc:#d9a441;--ok:#4caf7d;--bad:#e05a4f;--info:#5a9be0}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:15px "IBM Plex Sans",system-ui,sans-serif;min-height:100vh}
+.mono{font-family:"IBM Plex Mono",monospace}
+.muted{color:var(--muted)}.small{font-size:13px}
+.hidden{display:none!important}
+/* Acceso */
+.center{min-height:100vh;display:grid;place-items:center;padding:20px}
+.box{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:28px;width:100%;max-width:400px}
+.brand{font-weight:700;letter-spacing:.06em;font-size:20px;margin:0 0 4px}
+.brand span{color:var(--acc)}
+.sub{color:var(--muted);font-size:13px;margin:0 0 22px}
+label{display:block;font-size:13px;color:var(--muted);margin:14px 0 5px}
+input,select{width:100%;background:var(--panel2);border:1px solid var(--line);color:var(--text);padding:10px 12px;border-radius:5px;font:inherit}
+input:focus,select:focus{outline:1px solid var(--acc)}
+.code{font-family:"IBM Plex Mono",monospace;font-size:24px;letter-spacing:.4em;text-align:center}
+.btn{background:var(--acc);color:#1a1405;border:0;padding:11px 16px;border-radius:5px;font:inherit;font-weight:600;cursor:pointer;width:100%;margin-top:20px}
+.btn:disabled{opacity:.5;cursor:wait}
+.btn.ghost{background:transparent;border:1px solid var(--line);color:var(--text)}
+.btn.sm{width:auto;margin:0;padding:6px 12px;font-size:13px}
+.msg{margin-top:14px;font-size:13px;padding:9px 11px;border-radius:5px;display:none}
+.msg.on{display:block}
+.msg.err{background:#2b1513;border:1px solid #7a332d;color:#f2b3ad}
+.msg.ok{background:#14261c;border:1px solid #2f6b4d;color:#a9e2c3}
+.qr{background:#fff;border-radius:6px;padding:10px;width:200px;height:200px;margin:14px auto;display:block}
+.secret{word-break:break-all;background:var(--panel2);padding:8px;border-radius:4px;font-size:12px;text-align:center}
+ol.steps{padding-left:18px;color:var(--muted);font-size:13px;line-height:1.6;margin:0}
+/* Sistema */
+header{display:flex;align-items:center;gap:14px;padding:12px 20px;border-bottom:1px solid var(--line);background:#121619;flex-wrap:wrap}
+header h1{font-size:16px;margin:0;letter-spacing:.05em}
+header h1 span{color:var(--acc)}
+.sp{flex:1}
+.who{text-align:right;font-size:13px}
+.who b{display:block}
+.tag{display:inline-block;padding:2px 9px;border-radius:10px;font-size:11px;font-weight:600;border:1px solid var(--line);color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+.tag.admin{color:var(--acc);border-color:#7a5a24}
+.tag.ok{color:var(--ok);border-color:#2f6b4d}.tag.off{color:var(--bad);border-color:#7a332d}
+nav{display:flex;gap:2px;padding:0 20px;border-bottom:1px solid var(--line);background:#121619;overflow-x:auto}
+nav button{background:none;border:0;color:var(--muted);padding:12px 16px;font:inherit;font-weight:500;cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap}
+nav button.on{color:var(--text);border-color:var(--acc)}
+main{padding:22px;max-width:1100px;margin:0 auto}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:18px;margin-bottom:18px}
+.card h2{font-size:15px;margin:0 0 14px}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-bottom:18px}
+.stat{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:16px}
+.stat .n{font-size:30px;font-weight:700;font-family:"IBM Plex Mono",monospace}
+.stat.alerta .n{color:var(--bad)}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;align-items:end}
+.grid label{margin-top:0}
+.grid .btn{margin-top:0}
+table{width:100%;border-collapse:collapse}
+th{text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:600;padding:8px;border-bottom:1px solid var(--line)}
+td{padding:10px 8px;border-bottom:1px solid var(--line);vertical-align:middle}
+td select{padding:6px 8px;width:auto}
+.scroll{overflow-x:auto}
+.note{color:var(--muted);font-size:13px;line-height:1.5}
+</style>
+</head>
+<body>
+
+<!-- ========== 1. ACCESO ========== -->
+<div class="center hidden" id="vLogin">
+  <form class="box" id="fLogin">
+    <p class="brand"><span>CERBERUS</span> C2 ALPHA</p>
+    <p class="sub">CHARLYE 1 · Acceso restringido al personal autorizado</p>
+    <label>Correo</label>
+    <input type="email" id="lEmail" autocomplete="username" required>
+    <label>Contraseña</label>
+    <input type="password" id="lPass" autocomplete="current-password" required>
+    <button class="btn" id="bLogin">Entrar</button>
+    <div class="msg" id="mLogin"></div>
+  </form>
+</div>
+
+<!-- ========== 2. ACTIVAR VERIFICACIÓN EN DOS PASOS ========== -->
+<div class="center hidden" id="vEnroll">
+  <form class="box" id="fEnroll">
+    <p class="brand"><span>CERBERUS</span> C2 ALPHA</p>
+    <p class="sub">Primera vez: activa la verificación en dos pasos</p>
+    <ol class="steps">
+      <li>Instala en tu celular <b>Google Authenticator</b> o <b>Microsoft Authenticator</b>.</li>
+      <li>En la app toca <b>+</b> y escanea este código.</li>
+      <li>Escribe abajo el código de 6 dígitos que aparece.</li>
+    </ol>
+    <img class="qr" id="qr" alt="Código QR">
+    <p class="small muted" style="text-align:center;margin:0 0 4px">¿No puedes escanear? Escribe esta clave en la app:</p>
+    <div class="secret mono" id="secret"></div>
+    <label>Código de 6 dígitos</label>
+    <input class="code" id="eCode" inputmode="numeric" maxlength="6" pattern="[0-9]{6}" autocomplete="one-time-code" required>
+    <button class="btn" id="bEnroll">Activar</button>
+    <button class="btn ghost" type="button" data-salir>Salir</button>
+    <div class="msg" id="mEnroll"></div>
+  </form>
+</div>
+
+<!-- ========== 3. CÓDIGO EN CADA ACCESO ========== -->
+<div class="center hidden" id="vVerify">
+  <form class="box" id="fVerify">
+    <p class="brand"><span>CERBERUS</span> C2 ALPHA</p>
+    <p class="sub">Verificación en dos pasos</p>
+    <p class="note">Abre tu app de autenticación y escribe el código de 6 dígitos de <b>CERBERUS</b>.</p>
+    <label>Código</label>
+    <input class="code" id="vCode" inputmode="numeric" maxlength="6" pattern="[0-9]{6}" autocomplete="one-time-code" required>
+    <button class="btn" id="bVerify">Verificar</button>
+    <button class="btn ghost" type="button" data-salir>Salir</button>
+    <div class="msg" id="mVerify"></div>
+  </form>
+</div>
+
+<!-- ========== 4. SIN ACCESO ========== -->
+<div class="center hidden" id="vSinAcceso">
+  <div class="box">
+    <p class="brand"><span>CERBERUS</span> C2 ALPHA</p>
+    <p class="note" id="tSinAcceso">Tu cuenta no tiene un rol asignado o está desactivada. Pide al administrador que te dé acceso.</p>
+    <button class="btn ghost" data-salir>Salir</button>
+  </div>
+</div>
+
+<!-- ========== 5. SISTEMA ========== -->
+<div class="hidden" id="vApp">
+  <header>
+    <h1><span>CERBERUS</span> C2 ALPHA · CHARLYE 1</h1>
+    <span class="sp"></span>
+    <span class="mono muted small" id="reloj"></span>
+    <div class="who"><b id="uNombre"></b><span class="tag" id="uRol"></span></div>
+    <button class="btn ghost sm" data-salir>Salir</button>
+  </header>
+  <nav id="nav">
+    <button data-v="inicio" class="on">Inicio</button>
+    <button data-v="usuarios" id="navUsuarios" class="hidden">Usuarios</button>
+  </nav>
+  <main>
+    <section id="sInicio">
+      <div class="stats">
+        <div class="stat"><div class="muted small">Visitantes registrados (SOUL)</div><div class="n" id="nVisitantes">–</div></div>
+        <div class="stat"><div class="muted small">Fichas abiertas ahora</div><div class="n" id="nAbiertas">–</div></div>
+        <div class="stat alerta"><div class="muted small">Alertas sin responder</div><div class="n" id="nAlertas">–</div></div>
+      </div>
+      <div class="card">
+        <h2>Estado de CHARLYE 1</h2>
+        <p class="note">B1 Base de datos y B2 Usuarios y seguridad están activos. El registro de visitantes (B3) se agrega en el siguiente bloque.</p>
+        <p class="note small">Por seguridad, la sesión se cierra sola tras 15 minutos sin actividad.</p>
+      </div>
+    </section>
+
+    <section id="sUsuarios" class="hidden">
+      <div class="card">
+        <h2>Dar de alta o actualizar usuario</h2>
+        <p class="note small" style="margin-top:-6px">Paso previo: crea la cuenta en Supabase → Authentication → Users → Add user (con <i>Auto Confirm User</i>). Después asígnale aquí su nombre y rol.</p>
+        <form class="grid" id="fAlta">
+          <div><label>Correo</label><input type="email" id="aEmail" required></div>
+          <div><label>Nombre</label><input id="aNombre" required></div>
+          <div><label>Rol</label>
+            <select id="aRol">
+              <option value="monitorista">Monitorista</option>
+              <option value="cajero">Cajero</option>
+              <option value="supervisor">Supervisor</option>
+              <option value="administrador">Administrador</option>
+            </select></div>
+          <div><button class="btn" id="bAlta">Guardar</button></div>
+        </form>
+        <div class="msg" id="mAlta"></div>
+      </div>
+      <div class="card">
+        <h2>Usuarios del sistema</h2>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Nombre</th><th>Correo</th><th>Rol</th><th>Estado</th><th></th></tr></thead>
+            <tbody id="tUsuarios"></tbody>
+          </table>
+        </div>
+        <div class="msg" id="mUsuarios"></div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<script type="module">
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+
+// ---- Configuración del proyecto (clave pública, segura en el navegador) ----
+const SUPABASE_URL = 'https://tkbcwyglrdfuohlxvxfo.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_5-JfPJg6SqY2kQKSzL2CFQ_jMeotEPd';
+const MINUTOS_INACTIVIDAD = 15;
+
+const sb = createClient(SUPABASE_URL, SUPABASE_KEY);
+const $ = id => document.getElementById(id);
+const VISTAS = ['vLogin', 'vEnroll', 'vVerify', 'vSinAcceso', 'vApp'];
+let perfil = null;
+let factorEnroll = null;
+
+function mostrar(vista) {
+  VISTAS.forEach(v => $(v).classList.toggle('hidden', v !== vista));
+}
+function aviso(id, texto, tipo = 'err') {
+  const el = $(id);
+  el.textContent = texto;
+  el.className = 'msg on ' + tipo;
+}
+function limpiar(id) { $(id).className = 'msg'; }
+function ocupado(btn, si) { $(btn).disabled = si; }
+function esc(s) { return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function traducirError(e) {
+  const m = (e && e.message) || String(e);
+  if (/Invalid login credentials/i.test(m)) return 'Correo o contraseña incorrectos.';
+  if (/Email not confirmed/i.test(m)) return 'La cuenta no está confirmada. Créala con "Auto Confirm User".';
+  if (/Invalid TOTP code|invalid.*code/i.test(m)) return 'Código incorrecto o vencido. Escribe el código que aparece ahora en la app.';
+  if (/rate limit|too many/i.test(m)) return 'Demasiados intentos. Espera un minuto e intenta de nuevo.';
+  if (/Failed to fetch|NetworkError/i.test(m)) return 'Sin conexión con el servidor. Revisa tu internet.';
+  return m;
+}
+
+// ---------- Decide qué pantalla mostrar ----------
+async function enrutar() {
+  const { data: { session } } = await sb.auth.getSession();
+  if (!session) { mostrar('vLogin'); return; }
+
+  const { data: aal, error } = await sb.auth.mfa.getAuthenticatorAssuranceLevel();
+  if (error) { aviso('mLogin', traducirError(error)); mostrar('vLogin'); return; }
+
+  if (aal.currentLevel === 'aal2') { await abrirSistema(session.user); return; }
+  if (aal.nextLevel === 'aal2') { mostrar('vVerify'); $('vCode').value = ''; $('vCode').focus(); return; }
+  await iniciarEnroll();
+}
+
+// ---------- 1. Acceso ----------
+$('fLogin').addEventListener('submit', async ev => {
+  ev.preventDefault();
+  limpiar('mLogin'); ocupado('bLogin', true);
+  const { error } = await sb.auth.signInWithPassword({ email: $('lEmail').value.trim(), password: $('lPass').value });
+  ocupado('bLogin', false);
+  if (error) { aviso('mLogin', traducirError(error)); return; }
+  $('lPass').value = '';
+  enrutar();
+});
+
+// ---------- 2. Activar verificación en dos pasos ----------
+async function iniciarEnroll() {
+  mostrar('vEnroll'); limpiar('mEnroll');
+  // Borra intentos anteriores que no se completaron
+  const { data: lista } = await sb.auth.mfa.listFactors();
+  for (const f of (lista?.all || [])) {
+    if (f.status === 'unverified') await sb.auth.mfa.unenroll({ factorId: f.id });
+  }
+  const { data, error } = await sb.auth.mfa.enroll({ factorType: 'totp', friendlyName: 'CERBERUS ' + new Date().toISOString().slice(0, 10), issuer: 'CERBERUS C2 ALPHA' });
+  if (error) { aviso('mEnroll', traducirError(error)); return; }
+  factorEnroll = data.id;
+  $('qr').src = data.totp.qr_code;
+  $('secret').textContent = data.totp.secret;
+  $('eCode').value = ''; $('eCode').focus();
+}
+
+$('fEnroll').addEventListener('submit', async ev => {
+  ev.preventDefault();
+  limpiar('mEnroll'); ocupado('bEnroll', true);
+  const { error } = await sb.auth.mfa.challengeAndVerify({ factorId: factorEnroll, code: $('eCode').value.trim() });
+  ocupado('bEnroll', false);
+  if (error) { aviso('mEnroll', traducirError(error)); return; }
+  enrutar();
+});
+
+// ---------- 3. Código en cada acceso ----------
+$('fVerify').addEventListener('submit', async ev => {
+  ev.preventDefault();
+  limpiar('mVerify'); ocupado('bVerify', true);
+  const { data: lista, error: e1 } = await sb.auth.mfa.listFactors();
+  const factor = lista?.totp?.find(f => f.status === 'verified');
+  if (e1 || !factor) { ocupado('bVerify', false); aviso('mVerify', 'No se encontró tu verificación. Sal y vuelve a entrar.'); return; }
+  const { error } = await sb.auth.mfa.challengeAndVerify({ factorId: factor.id, code: $('vCode').value.trim() });
+  ocupado('bVerify', false);
+  if (error) { aviso('mVerify', traducirError(error)); return; }
+  enrutar();
+});
+
+// ---------- 4. Sistema ----------
+async function abrirSistema(user) {
+  const { data, error } = await sb.from('perfiles').select('*').eq('id', user.id).maybeSingle();
+  if (error || !data || !data.activo) {
+    $('tSinAcceso').textContent = error ? traducirError(error)
+      : 'Tu cuenta no tiene un rol asignado o está desactivada. Pide al administrador que te dé acceso.';
+    mostrar('vSinAcceso'); return;
+  }
+  perfil = data;
+  $('uNombre').textContent = perfil.nombre;
+  $('uRol').textContent = perfil.rol;
+  $('uRol').className = 'tag' + (perfil.rol === 'administrador' ? ' admin' : '');
+  $('navUsuarios').classList.toggle('hidden', perfil.rol !== 'administrador');
+  mostrar('vApp');
+  irA('inicio');
+  reiniciarInactividad();
+}
+
+function irA(v) {
+  document.querySelectorAll('#nav button').forEach(b => b.classList.toggle('on', b.dataset.v === v));
+  $('sInicio').classList.toggle('hidden', v !== 'inicio');
+  $('sUsuarios').classList.toggle('hidden', v !== 'usuarios');
+  if (v === 'inicio') cargarInicio();
+  if (v === 'usuarios') cargarUsuarios();
+}
+$('nav').addEventListener('click', ev => { const b = ev.target.closest('button'); if (b) irA(b.dataset.v); });
+
+async function contar(tabla, filtro) {
+  let q = sb.from(tabla).select('id', { count: 'exact', head: true });
+  if (filtro) q = filtro(q);
+  const { count, error } = await q;
+  return error ? '–' : count;
+}
+async function cargarInicio() {
+  $('nVisitantes').textContent = await contar('visitantes');
+  $('nAbiertas').textContent = await contar('visitas', q => q.eq('abierta', true));
+  $('nAlertas').textContent = await contar('alertas', q => q.is('respuesta', null));
+}
+
+// ---------- Panel de usuarios (solo administrador) ----------
+async function cargarUsuarios() {
+  limpiar('mUsuarios');
+  const { data, error } = await sb.from('perfiles').select('*').order('nombre');
+  if (error) { aviso('mUsuarios', traducirError(error)); return; }
+  const roles = ['monitorista', 'cajero', 'supervisor', 'administrador'];
+  $('tUsuarios').innerHTML = data.map(u => {
+    const yo = u.id === perfil.id;
+    return `<tr data-id="${u.id}">
+      <td>${esc(u.nombre)}${yo ? ' <span class="muted small">(tú)</span>' : ''}</td>
+      <td class="small">${esc(u.email || '')}</td>
+      <td><select data-rol ${yo ? 'disabled' : ''}>${roles.map(r => `<option ${r === u.rol ? 'selected' : ''}>${r}</option>`).join('')}</select></td>
+      <td><span class="tag ${u.activo ? 'ok' : 'off'}">${u.activo ? 'Activo' : 'Desactivado'}</span></td>
+      <td>${yo ? '' : `<button class="btn ghost sm" data-toggle="${u.activo ? '0' : '1'}">${u.activo ? 'Desactivar' : 'Activar'}</button>`}</td>
+    </tr>`;
+  }).join('') || '<tr><td colspan="5" class="muted">Sin usuarios</td></tr>';
+}
+
+$('tUsuarios').addEventListener('change', async ev => {
+  if (!ev.target.matches('[data-rol]')) return;
+  const id = ev.target.closest('tr').dataset.id;
+  const { error } = await sb.from('perfiles').update({ rol: ev.target.value }).eq('id', id);
+  if (error) aviso('mUsuarios', traducirError(error)); else aviso('mUsuarios', 'Rol actualizado.', 'ok');
+});
+
+$('tUsuarios').addEventListener('click', async ev => {
+  const b = ev.target.closest('[data-toggle]');
+  if (!b) return;
+  const id = b.closest('tr').dataset.id;
+  const { error } = await sb.from('perfiles').update({ activo: b.dataset.toggle === '1' }).eq('id', id);
+  if (error) { aviso('mUsuarios', traducirError(error)); return; }
+  cargarUsuarios();
+});
+
+$('fAlta').addEventListener('submit', async ev => {
+  ev.preventDefault();
+  limpiar('mAlta'); ocupado('bAlta', true);
+  const { data, error } = await sb.rpc('asignar_rol', {
+    p_email: $('aEmail').value.trim(), p_nombre: $('aNombre').value.trim(), p_rol: $('aRol').value
+  });
+  ocupado('bAlta', false);
+  if (error) { aviso('mAlta', traducirError(error)); return; }
+  aviso('mAlta', `Listo: ${data} tiene acceso como ${$('aRol').value}. La primera vez que entre activará su verificación en dos pasos.`, 'ok');
+  $('fAlta').reset();
+  cargarUsuarios();
+});
+
+// ---------- Salir y cierre por inactividad ----------
+async function salir() {
+  await sb.auth.signOut();
+  perfil = null;
+  mostrar('vLogin');
+}
+document.addEventListener('click', ev => { if (ev.target.closest('[data-salir]')) salir(); });
+
+let temporizador;
+function reiniciarInactividad() {
+  clearTimeout(temporizador);
+  if (!perfil) return;
+  temporizador = setTimeout(async () => {
+    await salir();
+    aviso('mLogin', `Sesión cerrada por ${MINUTOS_INACTIVIDAD} minutos sin actividad.`);
+  }, MINUTOS_INACTIVIDAD * 60 * 1000);
+}
+['click', 'keydown', 'touchstart'].forEach(e => document.addEventListener(e, reiniciarInactividad, { passive: true }));
+
+setInterval(() => { $('reloj').textContent = new Date().toLocaleString('es-MX', { dateStyle: 'medium', timeStyle: 'short' }); }, 1000);
+
+enrutar();
+</script>
+</body>
+</html>
